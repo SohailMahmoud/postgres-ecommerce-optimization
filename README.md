@@ -12,7 +12,7 @@ The database is intentionally populated with large datasets to demonstrate:
 - Real-world SQL tuning techniques
 
 
-## 🧱 Database Schema
+## Database Schema
 
 ### Entity Relationship Overview
 ERD image here
@@ -24,9 +24,9 @@ ERD image here
 - Order Details
 
 
-## 📋 Table Schemas
+## Table Schemas
 
-### 1️⃣ Category
+### 1. Category
 | Column | Type | Description |
 |------|-----|-------------|
 | category_id | INT (PK) | Unique category identifier |
@@ -34,7 +34,7 @@ ERD image here
 
 ---
 
-### 2️⃣ Product
+### 2. Product
 | Column | Type | Description |
 |------|-----|-------------|
 | product_id | BIGINT (PK) | Product identifier |
@@ -46,7 +46,7 @@ ERD image here
 
 ---
 
-### 3️⃣ Customer
+### 3. Customer
 | Column | Type | Description |
 |------|-----|-------------|
 | customer_id | BIGINT (PK) | Customer identifier |
@@ -57,7 +57,7 @@ ERD image here
 
 ---
 
-### 4️⃣ Orders
+### 4. Orders
 | Column | Type | Description |
 |------|-----|-------------|
 | order_id | BIGINT (PK) | Order identifier |
@@ -67,7 +67,7 @@ ERD image here
 
 ---
 
-### 5️⃣ Order Details
+### 5. Order Details
 | Column | Type | Description |
 |------|-----|-------------|
 | order_detail_id | BIGINT (PK) | Order detail identifier |
@@ -77,10 +77,12 @@ ERD image here
 | unit_price | NUMERIC(12,2) | Price per unit |
 
 
-## 🛠️ Database DDL
+## Database DDL
 
 A SQL script to create the database and its tables:
 ```
+CREATE DATABASE ecommerce;
+
 CREATE TABLE category (
     category_id SERIAL PRIMARY KEY,
     category_name VARCHAR(100) NOT NULL UNIQUE
@@ -138,5 +140,80 @@ CREATE TABLE order_details (
         ON DELETE RESTRICT
 );
 
+```
+
+A SQL script to populate the tables with the required data:
+```
+CREATE OR REPLACE FUNCTION populate_categories()
+RETURNS void AS $$
+BEGIN
+    INSERT INTO category (category_name)
+    SELECT
+        'Category_' || gs
+    FROM generate_series(1, 100000) AS gs;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT populate_categories();
+
+CREATE OR REPLACE FUNCTION populate_products()
+RETURNS void AS $$
+BEGIN
+    INSERT INTO product (category_id, name, description, price, stock_quantity)
+    SELECT
+        ((gs - 1) % 100000) + 1,
+        'Product_' || gs,
+        'Description ' || gs,
+        (gs + 1)::numeric(12,2),
+        gs + 1
+    FROM generate_series(1, 5000000) AS gs;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT populate_products();
+
+CREATE OR REPLACE FUNCTION populate_customers()
+RETURNS void AS $$
+BEGIN
+    INSERT INTO customer (first_name, last_name, email, password)
+    SELECT
+        'First_' || gs,
+        'Last_' || gs,
+        'user' || gs || '@mail.com',
+        'hashed_password_' || gs
+    FROM generate_series(1, 1000000) AS gs;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT populate_customers();
+
+CREATE OR REPLACE FUNCTION populate_orders()
+RETURNS void AS $$
+BEGIN
+    INSERT INTO orders (customer_id, order_date, total_amount)
+    SELECT
+        ((gs - 1) % 1000000) + 1,
+        DATE '2024-01-01',
+        (gs + 10)::numeric(12,2)
+    FROM generate_series(1, 20000000) AS gs;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT populate_orders();
+
+CREATE OR REPLACE FUNCTION populate_order_details()
+RETURNS void AS $$
+BEGIN
+    INSERT INTO order_details (order_id, product_id, quantity, unit_price)
+    SELECT
+        ((gs - 1) % 20000000) + 1,
+        ((gs - 1) % 5000000) + 1,
+        (gs % 5) + 1,
+        ((gs % 100) + 1)::numeric(12,2)
+    FROM generate_series(1, 50000000) AS gs;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT populate_order_details();
 ```
 
