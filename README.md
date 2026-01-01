@@ -37,7 +37,7 @@ ERD image here
 ### 2. Product
 | Column | Type | Description |
 |------|-----|-------------|
-| product_id | BIGINT (PK) | Product identifier |
+| product_id | INT (PK) | Product identifier |
 | category_id | INT (FK) | References `category(category_id)` |
 | name | VARCHAR | Product name |
 | description | TEXT | Product description |
@@ -49,7 +49,7 @@ ERD image here
 ### 3. Customer
 | Column | Type | Description |
 |------|-----|-------------|
-| customer_id | BIGINT (PK) | Customer identifier |
+| customer_id | INT (PK) | Customer identifier |
 | first_name | VARCHAR | First name |
 | last_name | VARCHAR | Last name |
 | email | VARCHAR | Email address |
@@ -60,8 +60,8 @@ ERD image here
 ### 4. Orders
 | Column | Type | Description |
 |------|-----|-------------|
-| order_id | BIGINT (PK) | Order identifier |
-| customer_id | BIGINT (FK) | References `customer(customer_id)` |
+| order_id | INT (PK) | Order identifier |
+| customer_id | INT (FK) | References `customer(customer_id)` |
 | order_date | DATE | Order date |
 | total_amount | NUMERIC(12,2) | Total order value |
 
@@ -70,9 +70,9 @@ ERD image here
 ### 5. Order Details
 | Column | Type | Description |
 |------|-----|-------------|
-| order_detail_id | BIGINT (PK) | Order detail identifier |
-| order_id | BIGINT (FK) | References `orders(order_id)` |
-| product_id | BIGINT (FK) | References `product(product_id)` |
+| order_detail_id | INT (PK) | Order detail identifier |
+| order_id | INT (FK) | References `orders(order_id)` |
+| product_id | INT (FK) | References `product(product_id)` |
 | quantity | INT | Quantity ordered |
 | unit_price | NUMERIC(12,2) | Price per unit |
 
