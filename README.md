@@ -217,3 +217,34 @@ $$ LANGUAGE plpgsql;
 SELECT populate_order_details();
 ```
 
+## Query Optimization Case Studies:
+
+### 1. Total Number of Products per Category:
+| Simple Query | Execution time before optimization | Optimization Technique | Rewrite Query | Execution time after optimization |
+| ---- | ---- | ----- | ----- | ----- |
+| ```select category_id, count(*) as total_products from product group by category_id;``` | 832.168 ms | Adding non-clustered index on the category_id column | ```CREATE INDEX idx_product_category_id ON product(category_id); select category_id, count(*) as total_products from product group by category_id;``` | 474.947 ms |
+By adding the index on the category_id column here, we can avoid:
+- Full table scan
+- Hash aggregation
+- Sorting
+And by that we improved the performance by about 43%.
+
+### 2. Top Customers by Total Spending:
+| Simple Query | Execution time before optimization | Optimization Technique | Rewrite Query | Execution time after optimization |
+| ---- | ---- | ----- | ----- | ----- |
+| ```select category_id, count(*) as total_products from product group by category_id;``` | 832.168 ms | Adding non-clustered index on the category_id column | ```CREATE INDEX idx_product_category_id ON product(category_id); select category_id, count(*) as total_products from product group by category_id;``` | 474.947 ms |
+
+### 3. Most Recent Orders with Customer Information (Top 1000):
+| Simple Query | Execution time before optimization | Optimization Technique | Rewrite Query | Execution time after optimization |
+| ---- | ---- | ----- | ----- | ----- |
+| ```select category_id, count(*) as total_products from product group by category_id;``` | 832.168 ms | Adding non-clustered index on the category_id column | ```CREATE INDEX idx_product_category_id ON product(category_id); select category_id, count(*) as total_products from product group by category_id;``` | 474.947 ms |
+
+### 4. Products with Low Stock Quantity (< 10):
+| Simple Query | Execution time before optimization | Optimization Technique | Rewrite Query | Execution time after optimization |
+| ---- | ---- | ----- | ----- | ----- |
+| ```select category_id, count(*) as total_products from product group by category_id;``` | 832.168 ms | Adding non-clustered index on the category_id column | ```CREATE INDEX idx_product_category_id ON product(category_id); select category_id, count(*) as total_products from product group by category_id;``` | 474.947 ms |
+
+### 5. Revenue Generated per Product Category:
+| Simple Query | Execution time before optimization | Optimization Technique | Rewrite Query | Execution time after optimization |
+| ---- | ---- | ----- | ----- | ----- |
+| ```select category_id, count(*) as total_products from product group by category_id;``` | 832.168 ms | Adding non-clustered index on the category_id column | ```CREATE INDEX idx_product_category_id ON product(category_id); select category_id, count(*) as total_products from product group by category_id;``` | 474.947 ms |
