@@ -222,19 +222,27 @@ SELECT populate_order_details();
 ### 1. Total Number of Products per Category:
 | Simple Query | Execution time before optimization | Optimization Technique | Rewrite Query | Execution time after optimization |
 | ---- | ---- | ----- | ----- | ----- |
-| ```select category_id, count(*) as total_products from product group by category_id;``` | 832.168 ms | Adding non-clustered index on the category_id column | ```CREATE INDEX idx_product_category_id ON product(category_id); select category_id, count(*) as total_products from product group by category_id;``` | 474.947 ms|
+| ```select category_id, count(*) as total_products from product group by category_id;``` | 832.168 ms | Adding non-clustered index on the category_id column | ```CREATE INDEX idx_product_category_id ON product(category_id); select category_id, count(*) as total_products from product group by category_id;``` | 474.947 ms |
 
 By adding the index on the category_id column here, we can avoid:
 - Full table scan
 - Hash aggregation
 - Sorting
 
-And by that we improved the performance by about 43%.
+As a result, we improved performance by approximately 43%.
 
 ### 2. Top Customers by Total Spending:
 | Simple Query | Execution time before optimization | Optimization Technique | Rewrite Query | Execution time after optimization |
 | ---- | ---- | ----- | ----- | ----- |
-| ```select category_id, count(*) as total_products from product group by category_id;``` | 832.168 ms | Adding non-clustered index on the category_id column | ```CREATE INDEX idx_product_category_id ON product(category_id); select category_id, count(*) as total_products from product group by category_id;``` | 474.947 ms |
+| ```select customer_id, sum(total_amount) from orders group by customer_id order by sum(total_amount)desc limit 10;``` | 28389.099 ms | Creating a materilzed view using the same query | ```create materialized view mv_cust as select customer_id, sum(total_amount) from orders group by customer_id order by sum(total_amount)desc limit 10;``` | 0.024 ms |
+
+The query is slow because PostgreSQL must aggregate 20 million rows into 5 million customer groups, causing hash aggregation to spill over 700 MB to disk, which dominates execution time. 
+
+Possible solutions:
+- If we attempt to add an index on the customer_id column, the execution time increases to 41192.940 ms. Although an index enabled streaming aggregation via GroupAggregate, the overall execution time increased because index scans are significantly slower than sequential scans when reading the entire table.
+- If we create a materialized view, we can reduce the execution time significantly by 99%, but it comes with its cons:
+    - Consumes more storage
+    - Must be refreshed periodically to keep the stored data up-to-date and in sync
 
 ### 3. Most Recent Orders with Customer Information (Top 1000):
 | Simple Query | Execution time before optimization | Optimization Technique | Rewrite Query | Execution time after optimization |
