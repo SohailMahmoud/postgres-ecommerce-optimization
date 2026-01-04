@@ -240,7 +240,8 @@ The query is slow because PostgreSQL must aggregate 20 million rows into 5 milli
 
 Possible solutions:
 - If we attempt to add an index on the customer_id column, the execution time increases to 41192.940 ms. Although an index enabled streaming aggregation via GroupAggregate, the overall execution time increased because index scans are significantly slower than sequential scans when reading the entire table.
-- If we create a materialized view, we can reduce the execution time significantly by 99%, but it comes with its cons:
+- We can cluster the table based on the same index created above in point number 1, and the execution time decreased slightly to 26969.724 ms because we improved the table read instead of random I/O to seq. I/O.
+- We may create a materialized view, so we can reduce the execution time significantly by 99%, but it comes with its cons:
     - Consumes more storage
     - Must be refreshed periodically to keep the stored data up-to-date and in sync
 
@@ -252,7 +253,7 @@ Possible solutions:
 ### 4. Products with Low Stock Quantity (< 10):
 | Simple Query | Execution time before optimization | Optimization Technique | Rewrite Query | Execution time after optimization |
 | ---- | ---- | ----- | ----- | ----- |
-| ```select category_id, count(*) as total_products from product group by category_id;``` | 832.168 ms | Adding non-clustered index on the category_id column | ```CREATE INDEX idx_product_category_id ON product(category_id); select category_id, count(*) as total_products from product group by category_id;``` | 474.947 ms |
+| ```select * from product where stock_quantity < 10;``` | 281.313 ms | Adding non-clustered index on the stock_quantity column | ```CREATE INDEX idx_product_stock_quantity ON product(stock_quantity); select * from product where stock_quantity < 10;``` | 0.067 ms |
 
 ### 5. Revenue Generated per Product Category:
 | Simple Query | Execution time before optimization | Optimization Technique | Rewrite Query | Execution time after optimization |
