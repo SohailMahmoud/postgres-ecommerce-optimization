@@ -241,7 +241,7 @@ The query is slow because PostgreSQL must aggregate 20 million rows into 5 milli
 Possible solutions:
 - If we attempt to add an index on the customer_id column, the execution time increases to 41192.940 ms. Although an index enabled streaming aggregation via GroupAggregate, the overall execution time increased because index scans are significantly slower than sequential scans when reading the entire table.
 - We can cluster the table based on the same index created above in point number 1, and the execution time decreased slightly to 26969.724 ms because we improved the table read instead of random I/O to seq. I/O.
-- We may create a materialized view, so we can reduce the execution time significantly by 99%, but it comes with its cons:
+- We may create a materialized view so that we can reduce the execution time significantly by 99%, but it comes with its cons:
     - Consumes more storage
     - Must be refreshed periodically to keep the stored data up-to-date and in sync
 
@@ -258,4 +258,38 @@ Possible solutions:
 ### 5. Revenue Generated per Product Category:
 | Simple Query | Execution time before optimization | Optimization Technique | Rewrite Query | Execution time after optimization |
 | ---- | ---- | ----- | ----- | ----- |
-| ```select category_id, count(*) as total_products from product group by category_id;``` | 832.168 ms | Adding non-clustered index on the category_id column | ```CREATE INDEX idx_product_category_id ON product(category_id); select category_id, count(*) as total_products from product group by category_id;``` | 474.947 ms |
+| ```SELECT product.category_id, SUM(quantity * unit_price) AS revenue FROM order_details JOIN product ON product.product_id = order_details.product_id GROUP BY product.category_id;``` | 14476.996 ms | Creating a pre-aggregated table product_revenue | ```SELECT p.category_id, SUM(pr.total_revenue) FROM product_revenue pr JOIN product p ON p.product_id = pr.product_id GROUP BY p.category_id;``` | 4.831 ms |
+
+PostgreSQL scanned all order_details in parallel, cached product lookups using Memoize, aggregated revenue per category efficiently in memory, and merged results with minimal overhead. 
+
+Possible optimization approaches: 
+- We can create a materialized view as we did on query number 2.
+- We can use a pre-aggregated table to reduce the number of rows scanned. We call it product_revenue:
+```
+CREATE TABLE product_revenue (
+    product_id     BIGINT PRIMARY KEY,
+    total_revenue  NUMERIC(18,2) NOT NULL
+);
+```
+
+After that, we can populate it with the data using the following query:
+```
+INSERT INTO product_revenue (product_id, total_revenue)
+SELECT
+    product_id,
+    SUM(quantity * unit_price)
+FROM order_details
+GROUP BY product_id;
+```
+
+Then the final query will be:
+```
+SELECT
+    p.category_id,
+    SUM(pr.total_revenue)
+FROM product_revenue pr
+JOIN product p ON p.product_id = pr.product_id
+GROUP BY p.category_id;
+```
+
+The execution time is down to only 4.831 ms. As always, there is a trade-off here, which is that we must keep the product_revenue up-to-date by periodically - for example - running a batch refresh.
