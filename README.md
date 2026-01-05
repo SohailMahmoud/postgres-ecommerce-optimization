@@ -15,7 +15,7 @@ The database is intentionally populated with large datasets to demonstrate:
 ## Database Schema
 
 ### Entity Relationship Overview
-ERD image here
+<img width="1279" height="551" alt="e-commerce prototype" src="https://github.com/user-attachments/assets/b52d6597-9d79-41f5-b07a-4a469e0978ef" />
 
 - Category
 - Product
@@ -248,7 +248,17 @@ Possible solutions:
 ### 3. Most Recent Orders with Customer Information (Top 1000):
 | Simple Query | Execution time before optimization | Optimization Technique | Rewrite Query | Execution time after optimization |
 | ---- | ---- | ----- | ----- | ----- |
-| ```select category_id, count(*) as total_products from product group by category_id;``` | 832.168 ms | Adding non-clustered index on the category_id column | ```CREATE INDEX idx_product_category_id ON product(category_id); select category_id, count(*) as total_products from product group by category_id;``` | 474.947 ms |
+| ```SELECT c.customer_id, c.first_name, c.last_name, o.order_date FROM orders o JOIN customer c on o.customer_id = c.customer_id ORDER BY o.order_date DESC LIMIT 1000;``` | 29532.871 ms | Adding non-clustered composite index on the order_date DESC, customer_id columns | ```CREATE INDEX idx_orders_order_date_customer_id ON orders(order_date DESC, customer_id); SELECT c.customer_id, c.first_name, c.last_name, o.order_date FROM orders o JOIN customer c on o.customer_id = c.customer_id ORDER BY o.order_date DESC LIMIT 1000;``` | 14 ms |
+
+Currently, PostgreSQL scans the entire ```orders``` table because there is no usable index for the ```ORDER BY``` clause, and this dominates the overall query cost. We can significantly speed up the query by adding an index on ```order_date```.
+
+Possible indexing options are:
+- ```order_date``` only (ASC by default)
+This helps, but PostgreSQL still needs to perform an additional sort to retrieve the most recent (DESC) 1000 rows.
+- ```order_date DESC```
+This is better, as it matches the query’s sort order and eliminates the need for an extra sort step. This reduces the execution time to ~981 ms.
+- ```order_date DESC, customer_id```
+This is the most effective option. Since customer_id is the join key, including it in the index avoids extra lookups during the join with the customer table. This reduces the execution time dramatically to ~14 ms.
 
 ### 4. Products with Low Stock Quantity (< 10):
 | Simple Query | Execution time before optimization | Optimization Technique | Rewrite Query | Execution time after optimization |
